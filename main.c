@@ -4,7 +4,8 @@
 #include <unistd.h>
 
 #define MAX_CARDS 100
-#define DOOR_PIN 1234   // <-- PIN-kod för att öppna dörren
+#define DOOR_PIN 1234
+#define DB_FILE "cards.db"   // <-- Fil där kort sparas
 
 typedef struct {
     int cardNumber;
@@ -22,6 +23,47 @@ void getDate(char *buffer) {
     sprintf(buffer, "%04d-%02d-%02d %02d:%02d:%02d",
             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
             tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
+
+// ----------------------------
+// Ladda / spara kort i fil
+// ----------------------------
+void saveCardsToFile() {
+    FILE *f = fopen(DB_FILE, "w");
+    if (!f) {
+        printf("Kunde inte spara databasen!\n");
+        return;
+    }
+
+    for (int i = 0; i < cardCount; i++) {
+        fprintf(f, "%d %d %s\n",
+                cardDB[i].cardNumber,
+                cardDB[i].hasAccess,
+                cardDB[i].dateAdded);
+    }
+
+    fclose(f);
+}
+
+void loadCardsFromFile() {
+    FILE *f = fopen(DB_FILE, "r");
+    if (!f) {
+        printf("Ingen databas hittades, skapar ny...\n");
+        return;
+    }
+
+    cardCount = 0;
+    while (fscanf(f, "%d %d %[^\n]",
+                  &cardDB[cardCount].cardNumber,
+                  &cardDB[cardCount].hasAccess,
+                  cardDB[cardCount].dateAdded) == 3)
+    {
+        cardCount++;
+        if (cardCount >= MAX_CARDS) break;
+    }
+
+    fclose(f);
+    printf("Laddade %d kort från fil.\n", cardCount);
 }
 
 // Hitta kort
@@ -70,7 +112,7 @@ void listAllCards() {
     printf("\n");
 }
 
-// Lägg till/ta bort access
+// Lägg till / ta bort access
 void addRemoveAccess() {
     int number;
     printf("\nSkriv ett kortnummer: ");
@@ -92,6 +134,8 @@ void addRemoveAccess() {
                number,
                cardDB[index].hasAccess ? "PÅ" : "AV");
     }
+
+    saveCardsToFile();    // <-- Spara direkt
 }
 
 // Testscanna kort
@@ -110,6 +154,8 @@ void testScan() {
 }
 
 int main() {
+    loadCardsFromFile();  // <-- Ladda kort vid start
+
     int choice;
 
     while (1) {
@@ -127,8 +173,11 @@ int main() {
             case 2: listAllCards(); break;
             case 3: addRemoveAccess(); break;
             case 4: testScan(); break;
-            case 5: return 0;
-            default: printf("Fel val!\n\n");
+            case 5:
+                saveCardsToFile();   // <-- Spara innan avslut
+                return 0;
+            default:
+                printf("Fel val!\n\n");
         }
     }
 
