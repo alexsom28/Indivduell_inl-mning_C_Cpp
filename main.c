@@ -4,7 +4,6 @@
 #include <time.h>
 #include "safeinput.h"
 
-
 //  DATATYPER
 
 typedef struct {
@@ -17,7 +16,6 @@ typedef struct {
     Card *cards;
     int count;
 } SystemState;
-
 
 
 //  HJÄLPFUNKTIONER
@@ -37,7 +35,6 @@ int findCard(SystemState *state, int number) {
             return i;
     return -1;
 }
-
 
 
 //  MENYFUNKTIONER
@@ -67,18 +64,32 @@ void listAllCards(SystemState *state) {
 
 void addRemoveAccess(SystemState *state) {
     int number = safeInt("\nEnter card number: ");
+
+    
+    if (number <= 0) {
+        printf("ERROR: Card number must be a positive number!\n");
+        return;
+    }
+
     int index = findCard(state, number);
 
     if (index == -1) {
-        // Skapa nytt kort med realloc
-        state->cards = realloc(state->cards, (state->count + 1) * sizeof(Card));
+        // Säkrare minnesallokering
+        Card *newMemory = realloc(state->cards, (state->count + 1) * sizeof(Card));
+        if (newMemory == NULL) {
+            printf("ERROR: Memory allocation failed! Card not added.\n");
+            return; 
+        }
+
+        state->cards = newMemory;
         state->cards[state->count].cardNumber = number;
         state->cards[state->count].hasAccess = 1;
         getDate(state->cards[state->count].dateAdded);
         state->count++;
 
         printf("Card %d was created and now has ACCESS.\n", number);
-    } else {
+    } 
+    else {
         state->cards[index].hasAccess = !state->cards[index].hasAccess;
         printf("Card %d is now: %s\n",
             number,
@@ -88,6 +99,13 @@ void addRemoveAccess(SystemState *state) {
 
 void testScan(SystemState *state) {
     int number = safeInt("\nScan card number: ");
+
+    
+    if (number <= 0) {
+        printf("INVALID SCAN - Negative or zero card numbers are not allowed.\n\n");
+        return;
+    }
+
     int index = findCard(state, number);
 
     if (index == -1 || state->cards[index].hasAccess == 0)
@@ -97,18 +115,20 @@ void testScan(SystemState *state) {
 }
 
 
+//  HUVUDMENY
 
 int main() {
     SystemState state = {NULL, 0}; 
     int choice;
 
     while (1) {
-        printf("\n========= ADMIN MENU =========\n");
-        printf("1. Remote open door\n");
-        printf("2. List all cards\n");
-        printf("3. Add/remove access\n");
-        printf("4. Fake card test scanning\n");
-        printf("5. Exit program\n");
+        printf("\n======== MENU ========\n");
+        printf("[1] Remote open door\n");
+        printf("[2] List all cards\n");
+        printf("[3] Add/remove access\n");
+        printf("[4] Fake Test scan card\n");
+        printf("[5] Exit\n");
+        printf("======================\n");
 
         choice = safeInt("Choice: ");
 
@@ -123,6 +143,7 @@ int main() {
                 return 0;
             default:
                 printf("Invalid choice, try again!\n");
+                clearInputBuffer();
         }
     }
 }
